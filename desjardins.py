@@ -79,18 +79,18 @@ def write_output(name, options, data):
 
 ###################################################################################################
 
-def format_influxdb(comptes):
+def format_influxdb(accounts):
     """Print accounts to influxdb format"""
-    for compte in comptes:
+    for account in accounts:
         # tags
         tags = ("fullname=%(fullname)s,category=%(category)s,type=%(type)s,"
                 "id=%(id)s,caisse=%(caisse)s,unit=$")
-        if "description" in compte.keys():
+        if "description" in account.keys():
             tags = tags + ",description=%(description)s"
-        tags = tags % compte
+        tags = tags % account
         tags = tags.replace(" ", r"\ ")
         # influxdb
-        line = "comptes," + tags + " solde=%(montant)0.2f" % compte
+        line = "accounts," + tags + " solde=%(balance)0.2f" % account
         print line.encode("utf-8")
     sys.exit(0)
 
@@ -264,7 +264,7 @@ class DesjardinsConnection(object):
                              method="post",
                              data=data)
 
-    def get_comptes(self):
+    def get_accounts(self):
         """Return the account list"""
         params = {}
         params["token"] = "1"
@@ -277,7 +277,7 @@ class DesjardinsConnection(object):
 
         ###########################################################################################
         # Monitoring
-        comptes = []
+        accounts = []
         for panel in tree.findall("//div[@class='panel panel-tiroir']"):
             # Get panel_type
             try:
@@ -286,37 +286,37 @@ class DesjardinsConnection(object):
                 panel_type = panel_type.replace(",", "")
             except AttributeError:
                 continue
-            # Get comptes
-            for raw_compte in panel.findall("div//div[@class='section tiroir']"):
-                compte = {}
+            # Get accounts
+            for raw_account in panel.findall("div//div[@class='section tiroir']"):
+                account = {}
                 try:
-                    compte["fullname"] = raw_compte.find(".//h3").text.strip()
+                    account["fullname"] = raw_account.find(".//h3").text.strip()
                 except AttributeError:
                     continue
-                compte["category"] = panel_type
-                compte["id"], compte["type"] = compte["fullname"].split(" ", 1)
-                compte["caisse"] = raw_compte.find(".//p/span[@class='desc-ligne2']").text.strip()
+                account["category"] = panel_type
+                account["id"], account["type"] = account["fullname"].split(" ", 1)
+                account["caisse"] = raw_account.find(".//p/span[@class='desc-ligne2']").text.strip()
                 try:
-                    description = raw_compte.find(".//p/span[@class='desc-ligne1']").text.strip()
+                    description = raw_account.find(".//p/span[@class='desc-ligne1']").text.strip()
                     description = description.replace(u"\u2212", " ")
                     description = description.replace(u"\xa0", " ")
-                    compte["description"] = description.strip()
+                    account["description"] = description.strip()
                 except AttributeError:
                     pass
-                montant = raw_compte.find(".//div/span[@class='montant']").text.strip()
-                montant = montant.replace(u"\xa0", "")
-                montant = montant.replace(u"$", "")
-                montant = montant.replace(u",", ".")
-                montant = montant.replace(u"\u2212", "-")
-                compte["montant"] = float(montant)
-                if compte["category"] == u'Cartes pr\xeats et marges de cr\xe9dit':
+                balance = raw_account.find(".//div/span[@class='montant']").text.strip()
+                balance = balance.replace(u"\xa0", "")
+                balance = balance.replace(u"$", "")
+                balance = balance.replace(u",", ".")
+                balance = balance.replace(u"\u2212", "-")
+                account["balance"] = float(balance)
+                if account["category"] == u'Cartes pr\xeats et marges de cr\xe9dit':
                     # negate the number
-                    compte["montant"] = 0 - compte["montant"]
-                comptes.append(compte)
+                    account["balance"] = 0 - account["balance"]
+                accounts.append(account)
 
-        return comptes
+        return accounts
 
-    def list_ofx_compte(self):
+    def list_ofx_account(self):
         """Return the account list which can be
         downloaded as ofx file
         """
@@ -341,7 +341,7 @@ class DesjardinsConnection(object):
                 print key, " ==> ", value[1]
             sys.exit(0)
 
-    def get_ofx_compte(self, start_date=None, end_date=None):
+    def get_ofx_account(self, start_date=None, end_date=None):
         """Download ofx file from an account"""
         # get time
         now = datetime.datetime.now()
@@ -466,11 +466,11 @@ def main():
     conn.connect()
 
     if conn.options.influxdb:
-        comptes = conn.get_comptes()
-        format_influxdb(comptes)
+        accounts = conn.get_accounts()
+        format_influxdb(accounts)
         sys.exit(0)
 
-    conn.list_ofx_compte()
+    conn.list_ofx_account()
     if conn.options.account not in conn.accounts:
         print "Account not found, use -l option"
         sys.exit(0)
@@ -478,7 +478,7 @@ def main():
     if conn.options.account == "VISA":
         conn.get_ofx_visa()
     else:
-        conn.get_ofx_compte()
+        conn.get_ofx_account()
 
 if __name__ == '__main__':
     main()
