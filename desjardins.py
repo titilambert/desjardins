@@ -91,7 +91,7 @@ def format_influxdb(accounts):
         tags = tags.replace(" ", r"\ ")
         # influxdb
         line = "accounts," + tags + " solde=%(balance)0.2f" % account
-        print line.encode("utf-8")
+        print "{}".format(line.encode("utf-8"))
     sys.exit(0)
 
 
@@ -187,7 +187,7 @@ class DesjardinsConnection(object):
                 answer = questions[question]
                 break
         if answer is None:
-            print "No answer found for question"
+            print "No answer found for question")
             sys.exit(3)
 
         ###########################################################################################
@@ -215,10 +215,10 @@ class DesjardinsConnection(object):
             raw_res = requests.get(secure_img_url, cookies=self.cookies,
                                    headers=self.headers, verify=True)
         except requests.ConnectionError:
-            print "Error downloading image"
+            print "{}".format("Error downloading image")
             sys.exit(4)
         if raw_res.status_code == 404:
-            print "Error downloading image"
+            print "{}".format("Error downloading image")
             sys.exit(6)
         # Check secure phrase
         true_desjardins = False
@@ -228,7 +228,7 @@ class DesjardinsConnection(object):
         except AttributeError:
             pass
         if not true_desjardins:
-            print "This is not desjardins"
+            print "{}".format("This is not desjardins")
             sys.exit(5)
 
         ###########################################################################################
@@ -338,7 +338,7 @@ class DesjardinsConnection(object):
 
         if self.options.list_accounts:
             for key, value in self.accounts.items():
-                print key, " ==> ", value[1]
+                print u"{:10s} ==> {}".format(key, value[1])
             sys.exit(0)
 
     def get_ofx_account(self, start_date=None, end_date=None):
@@ -378,7 +378,7 @@ class DesjardinsConnection(object):
                     "-" + end_date.strftime("%Y%m%d")
         with open("/tmp/" + file_name + ".ofx", "w") as ofx_file:
             ofx_file.write(raw_res.content)
-        print account, "saved in", "/tmp/" + file_name + ".ofx"
+        print "{} saved in /tmp/{}.ofx".format(account, file_name)
         sys.exit(0)
 
     def get_ofx_visa(self, start_date=None, end_date=None):
@@ -456,7 +456,7 @@ class DesjardinsConnection(object):
                     end_date.strftime("%Y%m%d") + ".ofx"
         with open(file_name, "w") as ofx_file:
             ofx_file.write(raw_res.content)
-        print "VISA saved in", file_name
+        print "VISA saved in {}".format(file_name)
         sys.exit(0)
 
 
