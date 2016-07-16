@@ -358,6 +358,8 @@ class DesjardinsConnection(object):
                 print u"{:10s} ==> {}".format(key, value[1])
             sys.exit(0)
 
+        return tree
+
     def get_ofx_account(self, start_date=None, end_date=None):
         """Download ofx file from an account"""
         # get time
@@ -367,8 +369,9 @@ class DesjardinsConnection(object):
         # Find account name and id
         file_name = self.options.account
         account = self.accounts[self.options.account][1]
+        tree = self.list_ofx_account()
         # prepare data
-        data = {}
+        data = get_hidden_inputs(tree)
         data[self.accounts[self.options.account][0]] = "on"
         data["chPeriode"] = "PI"
         data["chDateJourMin"] = "%02d" % start_date.day
