@@ -13,6 +13,7 @@
 #import calendar
 import argparse
 import datetime
+import logging
 from StringIO import StringIO
 import sys
 
@@ -40,16 +41,14 @@ def get_args():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(description='Process some integers.')
     parser.add_argument('-l', '--list-accounts', dest='list_accounts', required=False,
-                        action='store_true', default=False,
-                       )
-    parser.add_argument('-a', '--account', dest='account', required=False,
-                       )
+                        action='store_true', default=False)
+    parser.add_argument('-a', '--account', dest='account', required=False)
     parser.add_argument('-i', '--influxdb', dest='influxdb', required=False,
-                        action='store_true', default=False,
-                       )
-    parser.add_argument('-d', '--debug', dest='debug', required=False,
-                        action='store_true', default=False,
-                       )
+                        action='store_true', default=False)
+    parser.add_argument('-L', '--log-level', dest='log_level', required=False,
+                        default="FATAL")
+    parser.add_argument('-H', '--log-html', dest='log_html', required=False,
+                        action="store_true", default=False)
     return parser.parse_args()
 
 def get_hidden_inputs(html):
@@ -73,7 +72,7 @@ def get_errors(html):
 
 def write_output(name, options, data):
     """Write html output on log file"""
-    if options.debug:
+    if options.log_html:
         with open("/tmp/" + name + ".html", "w") as html_file:
             html_file.write(data)
 
@@ -110,6 +109,22 @@ class DesjardinsConnection(object):
         # Accounts
         self.accounts = {'VISA': ('', 'VISA')}
 
+        # Set logs
+        self.logger = logging.Logger("desjardins")
+        numeric_level = getattr(logging, options.log_level.upper(), None)
+        if not isinstance(numeric_level, int):
+            raise ValueError('Invalid log level: %s' % options.log_level)
+        self.logger.setLevel(numeric_level)
+        # Set handler
+        ch = logging.StreamHandler()
+        ch.setLevel(logging.DEBUG)
+        # create formatter
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        # add formatter to ch
+        ch.setFormatter(formatter)
+        # add ch to logger
+        self.logger.addHandler(ch)
+
     def _request(self, host, path, method='get', data=None):
         # Set default
         if data is None:
@@ -123,6 +138,7 @@ class DesjardinsConnection(object):
             params = {}
         # build URL
         url = SCHEME + host + path
+        self.logger.info("Getting: %s", url)
         raw_res = getattr(requests, method.lower())(url, data=data, params=params,
                                                     cookies=self.cookies, headers=self.headers,
                                                     verify=True, allow_redirects=False)
@@ -147,6 +163,7 @@ class DesjardinsConnection(object):
         if tree is not None:
             errors = get_errors(tree)
             if errors:
+                self.logger.fatal("Getting: %s", url)
                 sys.exit(2)
 
         # Update cookies
@@ -187,7 +204,7 @@ class DesjardinsConnection(object):
                 answer = questions[question]
                 break
         if answer is None:
-            print "No answer found for question")
+            print "No answer found for question"
             sys.exit(3)
 
         ###########################################################################################
@@ -458,7 +475,6 @@ class DesjardinsConnection(object):
             ofx_file.write(raw_res.content)
         print "VISA saved in {}".format(file_name)
         sys.exit(0)
-
 
 def main():
     """Main function"""
