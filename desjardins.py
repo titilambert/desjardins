@@ -395,7 +395,7 @@ class DesjardinsConnection(object):
                     "-" + end_date.strftime("%Y%m%d")
         with open("/tmp/" + file_name + ".ofx", "w") as ofx_file:
             ofx_file.write(raw_res.content)
-        print "{} saved in /tmp/{}.ofx".format(account, file_name)
+        print u"{} saved in /tmp/{}.ofx".format(account, file_name)
         sys.exit(0)
 
     def get_ofx_visa(self, start_date=None, end_date=None):
