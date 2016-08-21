@@ -299,7 +299,7 @@ class DesjardinsConnection(object):
             # Get panel_type
             try:
                 title = panel.find("div/h2/a")
-                panel_type = [t for t in title.itertext()][-1].strip()
+                panel_type = [t.strip() for t in title.itertext() if t.strip() != ''][2]
                 panel_type = panel_type.replace(",", "")
             except AttributeError:
                 continue
