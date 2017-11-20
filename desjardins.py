@@ -70,9 +70,10 @@ def get_errors(html):
         return True
     return False
 
-def write_output(name, options, data):
+def write_output(name, options, data, url):
     """Write html output on log file"""
     if options.log_html:
+        print(url)
         with open("/tmp/" + name + ".html", "w") as html_file:
             html_file.write(data)
 
@@ -143,7 +144,7 @@ class DesjardinsConnection(object):
                                                     cookies=self.cookies, headers=self.headers,
                                                     verify=True, allow_redirects=False)
         # Write log
-        write_output("log", self.options, raw_res.content)
+        write_output("log", self.options, raw_res.content, url)
 
         # TODO better check output and status_code
 #        if raw_res.content == "":
@@ -191,30 +192,31 @@ class DesjardinsConnection(object):
                              data=data)
 
         ###########################################################################################
-        tree = self._request(ACCWEB_HOST,
-                             "/identifiantunique/defi",
-                             method="get",
-                             data=data)
-        # Find answer
-        answer = None
-        raw_questions = [x.text.strip() for x in tree.findall("//label[@for='valeurReponse']/b")
-                         if x.text is not None]
-        for question in raw_questions:
-            if question in questions:
-                answer = questions[question]
-                break
-        if answer is None:
-            print "No answer found for question"
-            sys.exit(3)
+        if False:
+            tree = self._request(ACCWEB_HOST,
+                                 "/identifiantunique/defi",
+                                 method="get",
+                                 data=data)
+            # Find answer
+            answer = None
+            raw_questions = [x.text.strip() for x in tree.findall("//label[@for='valeurReponse']/b")
+                             if x.text is not None]
+            for question in raw_questions:
+                if question in questions:
+                    answer = questions[question]
+                    break
+            if answer is None:
+                print "No answer found for question"
+                sys.exit(3)
 
-        ###########################################################################################
-        data = get_hidden_inputs(tree)
-        data["valeurReponse"] = answer
-        data["conserver"] = "false"
-        tree = self._request(ACCWEB_HOST,
-                             "/identifiantunique/defi/soumettre",
-                             method="post",
-                             data=data)
+            ###########################################################################################
+            data = get_hidden_inputs(tree)
+            data["valeurReponse"] = answer
+            data["conserver"] = "false"
+            tree = self._request(ACCWEB_HOST,
+                                 "/identifiantunique/defi/soumettre",
+                                 method="post",
+                                 data=data)
 
         ###########################################################################################
         # Seems useless
