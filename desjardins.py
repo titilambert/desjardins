@@ -125,6 +125,8 @@ class DesjardinsConnection(object):
         ch.setFormatter(formatter)
         # add ch to logger
         self.logger.addHandler(ch)
+        #
+        self._authenticate_retry = False
 
     def _request(self, host, path, method='get', data=None):
         # Set default
@@ -174,7 +176,7 @@ class DesjardinsConnection(object):
         return tree
 
 
-    def _authenticate(self):
+    def _authenticate(self, defi_enable=True):
         """Log in accesd website"""
         ###########################################
         tree = self._request(ACCWEB_HOST,
@@ -192,31 +194,35 @@ class DesjardinsConnection(object):
                              data=data)
 
         ###########################################################################################
-        if False:
+        if defi_enable:
             tree = self._request(ACCWEB_HOST,
                                  "/identifiantunique/defi",
                                  method="get",
                                  data=data)
             # Find answer
             answer = None
-            raw_questions = [x.text.strip() for x in tree.findall("//label[@for='valeurReponse']/b")
-                             if x.text is not None]
-            for question in raw_questions:
-                if question in questions:
-                    answer = questions[question]
-                    break
-            if answer is None:
-                print "No answer found for question"
-                sys.exit(3)
+            responses = tree.findall("//label[@for='valeurReponse']/b")
+            if responses == []:
+                no_question = True
+            else:
+                raw_questions = [x.text.strip() for x in tree.findall("//label[@for='valeurReponse']/b")
+                                 if x.text is not None]
+                for question in raw_questions:
+                    if question in questions:
+                        answer = questions[question]
+                        break
+                if answer is None:
+                    print "No answer found for question"
+                    sys.exit(3)
 
-            ###########################################################################################
-            data = get_hidden_inputs(tree)
-            data["valeurReponse"] = answer
-            data["conserver"] = "false"
-            tree = self._request(ACCWEB_HOST,
-                                 "/identifiantunique/defi/soumettre",
-                                 method="post",
-                                 data=data)
+                ###########################################################################################
+                data = get_hidden_inputs(tree)
+                data["valeurReponse"] = answer
+                data["conserver"] = "false"
+                tree = self._request(ACCWEB_HOST,
+                                     "/identifiantunique/defi/soumettre",
+                                     method="post",
+                                     data=data)
 
         ###########################################################################################
         # Seems useless
@@ -228,7 +234,18 @@ class DesjardinsConnection(object):
                              "/identifiantunique/authentification",
                              method="get",
                              data=params)
+
         # Get secure image
+        if tree.find("//form//div/img") is None:
+            # We don't need defi, so we need to retry without defi
+            if self._authenticate_retry:
+                print "{}".format("Error during Authentication")
+                sys.exit(5)
+            else:
+                self.cookies = {}
+                self._authenticate_retry = True
+                return self._authenticate(False)
+
         try:
             secure_img_url = SCHEME + ACCWEB_HOST + tree.find("//form//div/img").get("src")
             raw_res = requests.get(secure_img_url, cookies=self.cookies,
